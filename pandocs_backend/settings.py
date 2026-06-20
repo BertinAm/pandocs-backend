@@ -23,6 +23,22 @@ RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
+# Render terminates TLS and proxies to the app over plain HTTP internally,
+# so Django needs this to correctly detect request.is_secure() — without
+# it, secure cookies/CSRF checks can fail in subtle ways behind the proxy.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+# Django 4+ requires the exact scheme+host of any origin allowed to submit
+# state-changing requests (e.g. the admin login POST). Without this, you'll
+# get "CSRF verification failed" on Render even though the cookie is valid.
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{RENDER_EXTERNAL_HOSTNAME}" if RENDER_EXTERNAL_HOSTNAME else "http://localhost:8000",
+]
+_extra_csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+if _extra_csrf_origins:
+    CSRF_TRUSTED_ORIGINS += [o.strip() for o in _extra_csrf_origins.split(",") if o.strip()]
+
 # ---------------------------------------------------------------------------
 # Installed apps
 # ---------------------------------------------------------------------------
