@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ title }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 20mm 20mm 20mm;
+      @top-center {
+        content: "{{ title }}";
+        font-size: 8pt;
+        color: #6b7280;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+      }
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 8pt;
+        color: #6b7280;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+      }
+      @bottom-left {
+        content: "Pandocs Collaborative Editor";
+        font-size: 8pt;
+        color: #6b7280;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11pt;
+      color: #1e293b;
+      line-height: 1.7;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Cover header strip */
+    .doc-header {
+      border-bottom: 3px solid #4f46e5;
+      padding-bottom: 16px;
+      margin-bottom: 28px;
+    }
+    .doc-header h1.title {
+      font-size: 24pt;
+      color: #0f172a;
+      margin: 0 0 4px 0;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .doc-header .meta {
+      font-size: 9pt;
+      color: #6b7280;
+    }
+
+    /* Headings */
+    h1 { font-size: 20pt; color: #0f172a; margin: 28px 0 10px; font-weight: 800; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 6px; page-break-after: avoid; }
+    h2 { font-size: 15pt; color: #1e293b; margin: 22px 0 8px; font-weight: 700; page-break-after: avoid; }
+    h3 { font-size: 12pt; color: #334155; margin: 18px 0 6px; font-weight: 700; page-break-after: avoid; }
+    h4, h5, h6 { font-size: 10.5pt; color: #475569; margin: 14px 0 4px; font-weight: 600; page-break-after: avoid; }
+
+    /* Paragraphs */
+    p { margin: 0 0 12px; orphans: 3; widows: 3; }
+
+    /* Links */
+    a { color: #4f46e5; text-decoration: underline; }
+
+    /* Lists */
+    ul, ol { margin: 0 0 14px 0; padding-left: 24px; }
+    li { margin-bottom: 5px; }
+    ul li::marker { color: #4f46e5; }
+
+    /* Checklist */
+    input[type="checkbox"] { margin-right: 6px; accent-color: #4f46e5; }
+
+    /* Horizontal rule */
+    hr { border: none; border-top: 1.5px solid #e2e8f0; margin: 24px 0; }
+
+    /* Blockquote */
+    blockquote {
+      margin: 16px 0;
+      padding: 12px 18px;
+      background: #eff6ff;
+      border-left: 4px solid #4f46e5;
+      color: #334155;
+      font-style: italic;
+      border-radius: 0 6px 6px 0;
+    }
+    blockquote p { margin: 0; }
+
+    /* Code inline */
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 9.5pt;
+      background: #f1f5f9;
+      color: #4f46e5;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* Code block */
+    pre {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      margin: 16px 0;
+      page-break-inside: avoid;
+    }
+    pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: #1e293b;
+      font-size: 9pt;
+      line-height: 1.6;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 10pt;
+      page-break-inside: avoid;
+    }
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+      text-align: left;
+      padding: 8px 12px;
+      border: 1px solid #cbd5e1;
+    }
+    td {
+      padding: 7px 12px;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+    }
+    tr:nth-child(even) td { background: #f8fafc; }
+
+    /* Images */
+    img { max-width: 100%; height: auto; border-radius: 6px; margin: 12px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Document header -->
+  <div class="doc-header">
+    <h1 class="title">{{ title }}</h1>
+    <div class="meta">Author: {{ author }}</div>
+  </div>
+
+  <!-- Rendered markdown body -->
+  {{ body|safe }}
+
+</body>
+</html>
