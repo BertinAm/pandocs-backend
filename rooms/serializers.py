@@ -21,4 +21,4 @@ class CollaborativeRoomSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CollaborativeRoom
-        fields = ["id", "name", "content", "created_at", "updated_at", "listeners"]
+        fields = ["id", "name", "content", "is_live", "created_at", "updated_at", "listeners"]

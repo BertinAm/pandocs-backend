@@ -12,6 +12,11 @@ class CollaborativeRoom(models.Model):
     )
     name = models.CharField(max_length=255, default="Shared Workspace Document.md")
     content = models.TextField(blank=True, default="# Shared Document Markdown\n")
+    is_live = models.BooleanField(
+        default=True,
+        help_text="When False, the room's link is revoked — no new WebSocket "
+        "connections are accepted and existing ones are force-closed.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

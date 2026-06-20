@@ -12,6 +12,13 @@ from .serializers import (
     DocumentRevisionSerializer,
 )
 
+try:
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+except ImportError:
+    async_to_sync = None
+    get_channel_layer = None
+
 
 # ---------------------------------------------------------------------------
 # Lightweight markdown → HTML converter (uses only stdlib + re, no extra deps)
@@ -202,6 +209,44 @@ class CollaborativeRoomViewSet(viewsets.ModelViewSet):
             },
         )
         return Response(GuestPresenceSerializer(presence).data, status=status.HTTP_200_OK)
+
+    # ------------------------------------------------------------------
+    # POST /api/rooms/<id>/stop-live/
+    # ------------------------------------------------------------------
+    @action(detail=True, methods=["post"], url_path="stop-live")
+    def stop_live(self, request, id=None):
+        """
+        Revoke this room's live link. No new WebSocket connections will be
+        accepted, and anyone currently connected is force-disconnected
+        immediately — not just the peer who called this.
+        """
+        room = self.get_object()
+        room.is_live = False
+        room.save(update_fields=["is_live"])
+
+        if get_channel_layer and async_to_sync:
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"collab_room_{room.id}",
+                    {"type": "broadcast_room_closed"},
+                )
+
+        return Response(
+            {"success": True, "message": "Live sharing stopped — the link is now closed for everyone."},
+            status=status.HTTP_200_OK,
+        )
+
+    # ------------------------------------------------------------------
+    # POST /api/rooms/<id>/go-live/
+    # ------------------------------------------------------------------
+    @action(detail=True, methods=["post"], url_path="go-live")
+    def go_live(self, request, id=None):
+        """Re-activate a room's link after it was previously stopped."""
+        room = self.get_object()
+        room.is_live = True
+        room.save(update_fields=["is_live"])
+        return Response(CollaborativeRoomSerializer(room).data, status=status.HTTP_200_OK)
 
     # ------------------------------------------------------------------
     # GET /api/rooms/<id>/revisions/
