@@ -163,10 +163,21 @@ class CollaborativeRoomViewSet(viewsets.ModelViewSet):
     """
     CRUD for anonymous collaborative rooms plus custom actions:
     pulse, revisions, save-revision, rollback, backup.
+
+    Rooms work on a "secret link" model — knowing the room ID grants
+    access, like a Google Doc share link. The `list` action is disabled
+    so the full room table is never exposed; you must already know a
+    room's ID to retrieve, update, or otherwise act on it.
     """
     queryset = CollaborativeRoom.objects.all()
     serializer_class = CollaborativeRoomSerializer
     lookup_field = "id"
+
+    def list(self, request, *args, **kwargs):
+        return Response(
+            {"detail": "Listing all rooms is disabled. Access a room directly via its id."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
     # ------------------------------------------------------------------
     # POST /api/rooms/<id>/pulse/
