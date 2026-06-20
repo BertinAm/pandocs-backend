@@ -19,3 +19,7 @@ daphne==4.2.2
 # Background tasks (optional)
 # celery==5.x
 # redis==5.x
+
+# Database backup uploads to S3 (optional — only needed by backup_db
+# management command when BACKUP_S3_BUCKET is set)
+boto3==1.42.5

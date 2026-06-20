@@ -16,6 +16,10 @@ staticfiles/
 media/
 *.log
 
+# Database backups (generated locally / in CI — never commit dump files)
+backups/
+*.sql
+
 # Environment variables
 .env
 !.env.example

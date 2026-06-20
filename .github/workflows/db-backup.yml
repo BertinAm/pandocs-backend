@@ -1,0 +1,43 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Daily at 03:00 UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client (pg_dump)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run backup
+        env:
+          # Use the EXTERNAL Database URL here — GitHub's runners are outside
+          # Render's private network and can't reach the internal hostname.
+          DATABASE_URL: ${{ secrets.DATABASE_URL_EXTERNAL }}
+          # Optional: set these three to also push the dump to S3-compatible
+          # storage for retention beyond GitHub's 90-day artifact limit.
+          BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: python manage.py backup_db
+
+      - name: Upload backup as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pandocs-db-backup-${{ github.run_id }}
+          path: backups/*.sql
+          retention-days: 90

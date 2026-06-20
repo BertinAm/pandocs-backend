@@ -222,6 +222,49 @@ Only if you want the **server-side WebSocket real-time sync** (`/ws/collab/<room
 
 ---
 
+## Database Backups
+
+⚠️ **Render's free PostgreSQL instances are deleted after 30 days** unless upgraded to a paid plan. Even if you plan to upgrade, it's worth having an independent backup so a missed renewal or an account issue doesn't mean total data loss.
+
+This repo includes two pieces for this:
+
+### `backup_db` management command
+
+```bash
+python manage.py backup_db
+```
+
+Runs `pg_dump` against `DATABASE_URL` and writes a timestamped `.sql` file to `backups/` (gitignored — never committed). If `BACKUP_S3_BUCKET` + AWS credentials are set, it also uploads the dump to S3-compatible storage.
+
+### Scheduled GitHub Actions workflow
+
+[`.github/workflows/db-backup.yml`](.github/workflows/db-backup.yml) runs this command automatically **once a day** and uploads the dump as a GitHub Actions artifact (retained 90 days), or to S3 if configured.
+
+**To enable it, add these repository secrets** (GitHub repo → Settings → Secrets and variables → Actions):
+
+| Secret | Required | Value |
+|---|---|---|
+| `DATABASE_URL_EXTERNAL` | Yes | The Postgres **External** Database URL (CI runners are outside Render's private network — the internal hostname won't resolve there) |
+| `BACKUP_S3_BUCKET` | No | An S3 bucket name, if you want backups to outlive GitHub's 90-day artifact retention |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | No | Required only if `BACKUP_S3_BUCKET` is set |
+
+You can also trigger it manually any time from the **Actions** tab via "Run workflow" (`workflow_dispatch`).
+
+### Restoring from a backup
+
+```bash
+psql <NEW_DATABASE_URL> -f backups/pandocs-YYYYMMDD-HHMMSS.sql
+```
+
+### Recommended long-term plan
+
+Backups are a safety net, not a substitute for not having the database deleted. Before the 30-day free-tier expiry:
+
+1. **Best:** upgrade the Render Postgres instance to a paid plan (Basic-256mb is ~$10.50/mo total) — no expiry, no restore needed.
+2. **Alternative:** let the free instance expire, provision a new free one, and restore the latest backup into it — repeatable indefinitely, but means brief downtime and a 30-day rolling migration habit.
+
+---
+
 ## General Deployment Notes
 
 - Run `python manage.py collectstatic` before deploying — static files are served via WhiteNoise.
