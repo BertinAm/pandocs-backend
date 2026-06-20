@@ -8,10 +8,10 @@ dj-database-url==3.1.2
 psycopg2-binary==2.9.11
 gunicorn==23.0.0
 
-# WebSockets (install separately if Redis is available)
-# channels==4.x
-# channels-redis==4.x
-# daphne==4.x
+# WebSockets / real-time collaboration
+channels==4.3.2
+channels-redis==4.3.0
+daphne==4.2.2
 
 # PDF generation (optional — endpoint returns HTML if not installed)
 # xhtml2pdf==0.2.x

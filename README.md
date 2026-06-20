@@ -77,19 +77,27 @@ cp .env.example .env
 python manage.py migrate
 python manage.py seed_rooms
 
-# Start the dev server
+# Start the dev server (HTTP only)
 python manage.py runserver
+
+# OR start via daphne to also serve the WebSocket endpoint (ASGI)
+daphne -b 0.0.0.0 -p 8000 pandocs_backend.asgi:application
 ```
 
 The API is available at `http://localhost:8000/api/`.
 
-### Optional: enable real-time WebSocket sync
+### Real-time WebSocket sync (Redis)
+
+`channels`, `channels-redis`, and `daphne` are included in `requirements.txt` by default. The WebSocket consumer (`rooms/consumers.py`) needs a running Redis instance to broadcast edits across processes:
 
 ```bash
-pip install channels channels-redis daphne
+# Run Redis locally (Docker)
+docker run -p 6379:6379 redis:7-alpine
 ```
 
-Then set `REDIS_URL` in `.env` and run a local Redis instance. Without these, the server still runs fine — it just serves HTTP only.
+Set `REDIS_URL=redis://127.0.0.1:6379` in `.env` (already the default). Without a reachable Redis, the app gracefully falls back to `InMemoryChannelLayer`, which only broadcasts within a single process — fine for quick local testing, but not for anything beyond it.
+
+> Note: `python manage.py runserver` is WSGI-only and **will not** serve WebSocket connections. Use `daphne` (or another ASGI server) whenever you need to test real-time sync locally.
 
 ### Optional: enable styled PDF export
 
@@ -169,15 +177,16 @@ curl -X POST http://localhost:8000/api/rooms/backup/ \
 
 ## Deploying to Render
 
-This repo ships with a [`render.yaml`](render.yaml) blueprint and a [`build.sh`](build.sh) build script — Render can deploy it with minimal manual setup.
+This repo ships with a [`render.yaml`](render.yaml) blueprint and a [`build.sh`](build.sh) build script — Render can deploy it, including real-time WebSocket sync, with minimal manual setup.
 
 ### Option A — Render Blueprint (recommended)
 
 1. Push this repo to GitHub.
 2. In the Render dashboard, click **New → Blueprint** and select this repo.
-3. Render reads `render.yaml` and provisions:
-   - A **Web Service** running `gunicorn pandocs_backend.wsgi:application`
+3. Render reads `render.yaml` and provisions all three pieces together:
+   - A **Web Service** running `daphne -b 0.0.0.0 -p $PORT pandocs_backend.asgi:application` (ASGI — serves both the REST API and the `/ws/collab/` WebSocket endpoint)
    - A free **PostgreSQL** database, auto-wired via `DATABASE_URL`
+   - A free **Redis** instance, auto-wired via `REDIS_URL` — this is what makes the Channels WebSocket layer actually broadcast across connections
 4. Update `CORS_EXTRA_ORIGINS` in `render.yaml` (or the dashboard) to your actual deployed frontend URL.
 5. Deploy. Render runs `build.sh` (`pip install`, `collectstatic`, `migrate`) automatically on every deploy.
 
@@ -185,18 +194,30 @@ This repo ships with a [`render.yaml`](render.yaml) blueprint and a [`build.sh`]
 
 1. **New → Web Service**, connect this repo.
 2. **Build Command:** `./build.sh`
-3. **Start Command:** `gunicorn pandocs_backend.wsgi:application`
-4. Add environment variables:
+3. **Start Command:** `daphne -b 0.0.0.0 -p $PORT pandocs_backend.asgi:application`
+
+   > Do **not** use `gunicorn pandocs_backend.wsgi:application` here — gunicorn only speaks WSGI/HTTP and silently drops WebSocket connections. `daphne` against `asgi:application` is required for `/ws/collab/` to work.
+4. Provision a **Redis** instance (Render's native Key Value service, or an external provider like Upstash) and a **PostgreSQL** instance.
+5. Add environment variables:
    - `DJANGO_SECRET_KEY` — generate a strong random value
    - `DEBUG` = `False`
-   - `DATABASE_URL` — from a Render PostgreSQL instance (or omit to fall back to SQLite, **not recommended** for production since Render's disk is ephemeral)
+   - `DATABASE_URL` — from the PostgreSQL instance (omitting it falls back to SQLite, **not recommended** since Render's web service disk is ephemeral)
+   - `REDIS_URL` — from the Redis instance (omitting it falls back to `InMemoryChannelLayer`, which only works within a single process/instance)
    - `CORS_EXTRA_ORIGINS` — your frontend's deployed origin
-5. Deploy.
+6. Deploy.
+
+### Do you actually need Redis?
+
+Only if you want the **server-side WebSocket real-time sync** (`/ws/collab/<room_id>/`) to work reliably:
+
+- **Skip it** if you're relying solely on the frontend's `BroadcastChannel` (multi-tab, same-browser sync) — the REST API works fine without Redis.
+- **Skip it** if you're running a single Render instance for a quick demo and don't mind sync state resetting on every restart/redeploy (`InMemoryChannelLayer` fallback).
+- **Add it** for any deployment where peers connect from different browsers/devices and you want their edits to broadcast through the server reliably, especially once you scale beyond one instance.
 
 ### Notes on Render limitations
 
-- **WebSocket real-time sync** (`channels` + Redis) requires Render's paid tiers if you need a managed Redis add-on, or an external Redis provider (e.g. Upstash). The app degrades gracefully to HTTP-only without it.
 - **SQLite is not durable** on Render's free web service disk — always attach the PostgreSQL add-on (included in `render.yaml`) for anything beyond a quick demo.
+- Render's free Redis/PostgreSQL tiers may have data retention or uptime limits depending on your account — check Render's current free-tier policy before relying on it for production data.
 - `ALLOWED_HOSTS` automatically includes Render's injected `RENDER_EXTERNAL_HOSTNAME`, so no manual host configuration is needed for the default domain.
 
 ---

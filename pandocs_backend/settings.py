@@ -106,7 +106,7 @@ if DATABASE_URL:
 REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379")
 
 try:
-    from channels.layers import get_channel_layer  # noqa: F401
+    import channels_redis  # noqa: F401
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -114,7 +114,9 @@ try:
         }
     }
 except ImportError:
-    # channels_redis not installed — in-memory layer for dev/testing only
+    # channels_redis not installed — in-memory layer for dev/testing only.
+    # NOTE: only safe for a single process; broadcasts won't reach peers
+    # connected to a different worker/instance.
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",

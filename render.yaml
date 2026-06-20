@@ -4,7 +4,9 @@ services:
     runtime: python
     plan: free
     buildCommand: "./build.sh"
-    startCommand: "gunicorn pandocs_backend.wsgi:application"
+    # daphne (ASGI) is required instead of gunicorn (WSGI-only) so this
+    # service can serve both HTTP and the /ws/collab/ WebSocket endpoint.
+    startCommand: "daphne -b 0.0.0.0 -p $PORT pandocs_backend.asgi:application"
     envVars:
       - key: DJANGO_SECRET_KEY
         generateValue: true
@@ -16,8 +18,18 @@ services:
         fromDatabase:
           name: pandocs-db
           property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: pandocs-redis
+          property: connectionString
       - key: CORS_EXTRA_ORIGINS
         value: "https://pandocs-frontend.vercel.app"
+
+  - type: redis
+    name: pandocs-redis
+    plan: free
+    ipAllowList: []   # restrict to internal Render network only
 
 databases:
   - name: pandocs-db
