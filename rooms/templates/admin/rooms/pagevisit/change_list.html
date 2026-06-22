@@ -1,0 +1,31 @@
+{% extends "admin/change_list.html" %}
+
+{% block result_list %}
+<div style="display:flex; gap:14px; margin-bottom:22px; flex-wrap:wrap;">
+  <div style="padding:14px 22px; border:1px solid var(--border-color, #ccc); border-radius:8px; background:var(--body-bg, #fff);">
+    <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888;">Today</div>
+    <div style="font-size:26px; font-weight:700;">{{ visit_summary.today }}</div>
+  </div>
+  <div style="padding:14px 22px; border:1px solid var(--border-color, #ccc); border-radius:8px; background:var(--body-bg, #fff);">
+    <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888;">This week</div>
+    <div style="font-size:26px; font-weight:700;">{{ visit_summary.this_week }}</div>
+  </div>
+  <div style="padding:14px 22px; border:1px solid var(--border-color, #ccc); border-radius:8px; background:var(--body-bg, #fff);">
+    <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888;">This month</div>
+    <div style="font-size:26px; font-weight:700;">{{ visit_summary.this_month }}</div>
+  </div>
+  <div style="padding:14px 22px; border:1px solid var(--border-color, #ccc); border-radius:8px; background:var(--body-bg, #fff);">
+    <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888;">This year</div>
+    <div style="font-size:26px; font-weight:700;">{{ visit_summary.this_year }}</div>
+  </div>
+  <div style="padding:14px 22px; border:1px solid var(--border-color, #ccc); border-radius:8px; background:var(--body-bg, #fff);">
+    <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888;">All time</div>
+    <div style="font-size:26px; font-weight:700;">{{ visit_summary.all_time }}</div>
+  </div>
+  <div style="padding:14px 22px; border:1px solid var(--border-color, #ccc); border-radius:8px; background:var(--body-bg, #fff);">
+    <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#888;">Unique visitors</div>
+    <div style="font-size:26px; font-weight:700;">{{ visit_summary.unique_visitors }}</div>
+  </div>
+</div>
+{{ block.super }}
+{% endblock %}

@@ -3,9 +3,12 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import CollaborativeRoom, GuestPresence, DocumentRevision
+from .analytics import get_client_ip, parse_user_agent
+from .models import CollaborativeRoom, GuestPresence, DocumentRevision, PageVisit
 from .serializers import (
     CollaborativeRoomSerializer,
     GuestPresenceSerializer,
@@ -389,3 +392,32 @@ def export_as_pdf(request, room_id):
         # xhtml2pdf not installed — return the rendered HTML so the endpoint is
         # still usable for testing without the optional dependency.
         return HttpResponse(rendered_html, content_type="text/html")
+
+
+# ---------------------------------------------------------------------------
+# Visit tracking — public, write-only, best-effort analytics
+# ---------------------------------------------------------------------------
+
+class TrackVisitView(APIView):
+    """
+    Records a single page visit: IP, parsed browser/OS/device, path, referrer,
+    and a client-generated visitor_id (for approximate unique-visitor counts).
+    No auth required — this is meant to be called by the frontend on load.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+        parsed = parse_user_agent(user_agent)
+
+        PageVisit.objects.create(
+            ip_address=get_client_ip(request),
+            user_agent=user_agent[:2000],
+            browser=parsed["browser"],
+            operating_system=parsed["os"],
+            device_type=parsed["device"],
+            path=str(request.data.get("path", "/"))[:255],
+            referrer=str(request.data.get("referrer", ""))[:500],
+            visitor_id=str(request.data.get("visitor_id", ""))[:64],
+        )
+        return Response({"success": True}, status=status.HTTP_201_CREATED)

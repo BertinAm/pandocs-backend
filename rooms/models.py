@@ -65,3 +65,29 @@ class DocumentRevision(models.Model):
 
     def __str__(self):
         return f"Revision of room {self.room_id} at {self.created_at}"
+
+
+class PageVisit(models.Model):
+    """A single recorded visit to the frontend, sent by a lightweight tracking call."""
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, default="")
+    browser = models.CharField(max_length=50, blank=True, default="Unknown")
+    operating_system = models.CharField(max_length=50, blank=True, default="Unknown")
+    device_type = models.CharField(max_length=20, blank=True, default="Desktop")
+    path = models.CharField(max_length=255, blank=True, default="/")
+    referrer = models.CharField(max_length=500, blank=True, default="")
+    visitor_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Client-generated id stored in the browser's localStorage — "
+        "used to approximate unique visitors (not a real identity).",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.ip_address} – {self.browser}/{self.operating_system} @ {self.created_at}"

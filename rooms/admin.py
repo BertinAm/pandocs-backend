@@ -1,5 +1,9 @@
+from datetime import timedelta
+
 from django.contrib import admin
-from .models import CollaborativeRoom, GuestPresence, DocumentRevision
+from django.utils import timezone
+
+from .models import CollaborativeRoom, GuestPresence, DocumentRevision, PageVisit
 
 
 class GuestPresenceInline(admin.TabularInline):
@@ -47,3 +51,36 @@ class DocumentRevisionAdmin(admin.ModelAdmin):
     search_fields = ["room__id", "room__name", "updated_by_name"]
     ordering = ["-created_at"]
     readonly_fields = ["id", "created_at"]
+
+
+@admin.register(PageVisit)
+class PageVisitAdmin(admin.ModelAdmin):
+    list_display = ["created_at", "ip_address", "browser", "operating_system", "device_type", "path", "visitor_id"]
+    list_filter = ["browser", "operating_system", "device_type"]
+    search_fields = ["ip_address", "path", "referrer", "visitor_id", "user_agent"]
+    date_hierarchy = "created_at"
+    ordering = ["-created_at"]
+    readonly_fields = [f.name for f in PageVisit._meta.fields]
+
+    def has_add_permission(self, request):
+        # Visits are only ever created by the public tracking endpoint
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        now = timezone.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=today_start.weekday())
+        month_start = today_start.replace(day=1)
+        year_start = today_start.replace(month=1, day=1)
+
+        qs = PageVisit.objects.all()
+        extra_context = extra_context or {}
+        extra_context["visit_summary"] = {
+            "today": qs.filter(created_at__gte=today_start).count(),
+            "this_week": qs.filter(created_at__gte=week_start).count(),
+            "this_month": qs.filter(created_at__gte=month_start).count(),
+            "this_year": qs.filter(created_at__gte=year_start).count(),
+            "all_time": qs.count(),
+            "unique_visitors": qs.exclude(visitor_id="").values("visitor_id").distinct().count(),
+        }
+        return super().changelist_view(request, extra_context=extra_context)
